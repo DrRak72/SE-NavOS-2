@@ -25,7 +25,7 @@ namespace IngameScript
         public string GyroGroupName { get; set; } = "NavGyros";
         public string ConsoleLcdName { get; set; } = "consoleLcd";
         public double CruiseOffsetDist { get; set; } = 0;
-        public double CruiseOffsetSideDist { get; set; } = 0;
+        public double CruiseOffsetSideDist { get; set; } = 500;
         public double Ship180TurnTimeSeconds { get; set; } = 10.0;
         public bool MaintainDesiredSpeed { get; set; } = true;
         public List<string> JourneySetup { get; } = new List<string>();
@@ -100,14 +100,14 @@ namespace IngameScript
             {
                 double val;
                 if (double.TryParse(result, out val))
-                    conf.CruiseOffsetDist += val;
+                    conf.CruiseOffsetDist = val;
             }
 
             if (confValues.TryGetValue(nameof(CruiseOffsetSideDist), out result))
             {
                 double val;
                 if (double.TryParse(result, out val))
-                    conf.CruiseOffsetSideDist += val;
+                    conf.CruiseOffsetSideDist = val;
             }
 
             //support for v1.10 or older configs

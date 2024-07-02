@@ -10,117 +10,61 @@ namespace IngameScript
 {
     partial class Program
     {
+        private Dictionary<string, Action<CommandLine>> commands;
+
+        private void InitCommands()
+        {
+            commands = new Dictionary<string, Action<CommandLine>>
+            {
+                { "abort", cmd => AbortNav(false) },
+                { "reload", CommandReload },
+                { "maxthrustoverrideratio", CommandSetThrustRatio }, { "thrustratio", CommandSetThrustRatio },
+                { "cruise", CommandCruise },
+                { "retro", cmd => CommandRetrograde() }, { "retrograde", cmd => CommandRetrograde() },
+                { "retroburn", cmd => CommandRetroburn() },
+                { "prograde", cmd => CommandPrograde() },
+                { "match", cmd => CommandSpeedMatch() }, { "speedmatch", cmd => CommandSpeedMatch() },
+                { "orient", CommandOrient },
+                { "calibrateturn", cmd => CommandCalibrateTurnTime() },
+                { "thrust", CommandApplyThrust },
+                { "journey", CommandJourney },
+            };
+        }
+
         private void HandleArgs(string argument)
         {
-            if (argument.Length == 0)
+            if (String.IsNullOrWhiteSpace(argument))
             {
                 return;
             }
 
-            string argLower = argument.ToLower();
+            CommandLine cmd = new CommandLine(argument);
 
-            if (argLower.Contains("abort"))
+            foreach (var kv in commands)
             {
-                AbortNav(false);
-                return;
-            }
-
-            string[] args = argLower.Split(' ');
-
-            if (args.Length < 1)
-            {
-                return;
-            }
-
-            if (args[0].Equals("reload"))
-            {
-                AbortNav(false);
-                LoadConfig(true);
-                return;
-            }
-            else if (args[0].Equals("maxthrustoverrideratio") || args[0].Equals("thrustratio"))
-            {
-                SetThrustRatio(args);
-                return;
-            }
-
-            Action cmdAction = null;
-
-            if (args.Length >= 3 && args[0].Equals("cruise"))
-            {
-                cmdAction = () => CommandCruise(args, argLower);
-            }
-            else if (args[0] == "retro" || args[0] == "retrograde")
-            {
-                cmdAction = CommandRetrograde;
-            }
-            else if (args[0] == "retroburn")
-            {
-                cmdAction = CommandRetroburn;
-            }
-            else if (args[0] == "prograde")
-            {
-                cmdAction = CommandPrograde;
-            }
-            else if (args[0] == "match" || args[0] == "speedmatch")
-            {
-                cmdAction = CommandSpeedMatch;
-            }
-            else if (args[0] == "orient")
-            {
-                cmdAction = () => CommandOrient(argLower);
-            }
-            else if (args[0] == "calibrateturn")
-            {
-                cmdAction = CommandCalibrateTurnTime;
-            }
-            else if (args[0] == "thrust")
-            {
-                float ratio;
-                if (args.Length >= 3 && args[1] == "set" && float.TryParse(args[2], out ratio))
+                if (cmd.Matches(0, kv.Key))
                 {
-                    if (ratio < 0 || ratio > 1.01)
-                    {
-                        optionalInfo = "Ratio must be between 0.0 and 1.0!";
-                    }
-                    else
-                    {
-                        optionalInfo = $"Forward thrust override set to {ratio * 100:0.###}%";
-                        foreach (IMyThrust thrust in thrusters[Direction.Forward])
-                        {
-                            thrust.ThrustOverridePercentage = ratio;
-                        }
-                    }
+                    kv.Value.Invoke(cmd);
                 }
-            }
-            else if (args.Length >= 2 && args[0] == "journey")
-            {
-                optionalInfo = "";
-                string failReason;
-                if (args[1] == "load")
-                    cmdAction = InitJourney;
-                else if (cruiseController is Journey && !((Journey)cruiseController).HandleJourneyCommand(args, argument, out failReason))
-                    optionalInfo = failReason;
-            }
-
-            if (cmdAction != null)
-            {
-                AbortNav(false);
-                optionalInfo = "";
-                cmdAction.Invoke();
             }
         }
 
-        private void SetThrustRatio(string[] args)
+        private void CommandReload(CommandLine cmd)
         {
-            if (args.Length < 2)
+            AbortNav(false);
+            LoadConfig(true);
+        }
+
+        private void CommandSetThrustRatio(CommandLine cmd)
+        {
+            if (cmd.Count < 2)
             {
                 optionalInfo = "New override ratio argument not found!";
                 return;
             }
 
             double result;
-            if (!double.TryParse(args[1], out result))
+            if (!double.TryParse(cmd[1], out result))
             {
                 optionalInfo = "Could not parse new override ratio";
                 return;
@@ -145,43 +89,37 @@ namespace IngameScript
             optionalInfo = $"New thrust ratio set to {result:0.##}";
         }
 
-        private void CommandCruise(string[] args, string argument)
+        private void CommandCruise(CommandLine cmd)
         {
+            if (cmd.Count < 3)
+            {
+                return;
+            }
+
+            AbortNav(false);
+            optionalInfo = "";
+
             try
             {
-                double desiredSpeed = double.Parse(args[1]);
+                double desiredSpeed = double.Parse(cmd[1]);
                 Vector3D target;
 
                 double result;
                 bool distanceCruise;
-                int gpsIndex = argument.IndexOf("gps:", StringComparison.OrdinalIgnoreCase);
-                if (distanceCruise = double.TryParse(args[2], out result))
+                bool containsGps = cmd.Gps.HasValue;
+                if (distanceCruise = double.TryParse(cmd[2], out result))
                 {
                     target = controller.GetPosition() + (controller.WorldMatrix.Forward * result);
                 }
-                else if (gpsIndex >= 0)
+                else if (containsGps)
                 {
-                    try
-                    {
-                        string[] coords = argument.Substring(gpsIndex).Split(':');
-
-                        double x = double.Parse(coords[2]);
-                        double y = double.Parse(coords[3]);
-                        double z = double.Parse(coords[4]);
-
-                        target = new Vector3D(x, y, z);
-                    }
-                    catch (Exception e)
-                    {
-                        optionalInfo = "Error occurred while parsing gps";
-                        return;
-                    }
+                    target = cmd.Gps.Value.Position;
                 }
                 else
                 {
                     try
                     {
-                        string[] coords = args[2].Split(':');
+                        string[] coords = cmd[2].Split(':');
 
                         double x = double.Parse(coords[0]);
                         double y = double.Parse(coords[1]);
@@ -242,6 +180,8 @@ namespace IngameScript
 
         private void CommandRetrograde()
         {
+            AbortNav(false);
+            optionalInfo = "";
             NavMode = NavModeEnum.Retrograde;
             cruiseController = new Retrograde(aimController, controller, gyros);
             cruiseController.CruiseTerminated += CruiseTerminated;
@@ -251,6 +191,8 @@ namespace IngameScript
 
         private void CommandRetroburn()
         {
+            AbortNav(false);
+            optionalInfo = "";
             NavMode = NavModeEnum.Retroburn;
             thrustController.MaxThrustRatio = (float)config.MaxThrustOverrideRatio;
             cruiseController = new Retroburn(aimController, controller, gyros, thrustController);
@@ -261,6 +203,8 @@ namespace IngameScript
 
         private void CommandPrograde()
         {
+            AbortNav(false);
+            optionalInfo = "";
             NavMode = NavModeEnum.Prograde;
             cruiseController = new Prograde(aimController, controller, gyros);
             cruiseController.CruiseTerminated += CruiseTerminated;
@@ -270,6 +214,8 @@ namespace IngameScript
 
         private void CommandSpeedMatch()
         {
+            AbortNav(false);
+            optionalInfo = "";
             if (!wcApiActive)
             {
                 try { wcApiActive = wcApi.Activate(Me); }
@@ -283,45 +229,64 @@ namespace IngameScript
             InitSpeedMatch(target.Value.EntityId);
         }
 
-        private void CommandOrient(string argument)
+        private void CommandOrient(CommandLine cmd)
         {
-            try
+            AbortNav(false);
+            optionalInfo = "";
+            if (!cmd.Gps.HasValue)
             {
-                Vector3D target;
-
-                int gpsIndex = argument.IndexOf("gps:", StringComparison.OrdinalIgnoreCase);
-                if (gpsIndex >= 0)
-                {
-                    string[] coords = argument.Substring(gpsIndex).Split(':');
-
-                    double x = double.Parse(coords[2]);
-                    double y = double.Parse(coords[3]);
-                    double z = double.Parse(coords[4]);
-
-                    target = new Vector3D(x, y, z);
-                }
-                else
-                {
-                    optionalInfo = "Incorrect orient command params, no gps detected";
-                    return;
-                }
-
-                InitOrient(target);
-                optionalInfo = "";
+                optionalInfo = "Incorrect orient command params, no gps detected";
+                return;
             }
-            catch (Exception e)
-            {
-                optionalInfo = e.ToString();
-            }
+
+            InitOrient(cmd.Gps.Value.Position);
+            optionalInfo = "";
         }
 
         private void CommandCalibrateTurnTime()
         {
+            AbortNav(false);
+            optionalInfo = "";
             NavMode = NavModeEnum.CalibrateTurnTime;
             cruiseController = new CalibrateTurnTime(config, aimController, controller, gyros);
             cruiseController.CruiseTerminated += CruiseTerminated;
             config.PersistStateData = $"{NavModeEnum.CalibrateTurnTime}";
             SaveConfig();
+        }
+
+        private void CommandApplyThrust(CommandLine cmd)
+        {
+            AbortNav(false);
+            optionalInfo = "";
+            float ratio;
+            if (cmd.Count >= 3 && cmd.Matches(1, "set") && float.TryParse(cmd[2], out ratio))
+            {
+                if (ratio < 0 || ratio > 1.01)
+                {
+                    optionalInfo = "Ratio must be between 0.0 and 1.0!";
+                }
+                else
+                {
+                    optionalInfo = $"Forward thrust override set to {ratio * 100:0.###}%";
+                    foreach (IMyThrust thrust in thrusters[Direction.Forward])
+                    {
+                        thrust.ThrustOverridePercentage = ratio;
+                    }
+                }
+            }
+        }
+
+        private void CommandJourney(CommandLine cmd)
+        {
+            optionalInfo = "";
+            if (cmd.Count < 2)
+                return;
+            optionalInfo = "";
+            string failReason;
+            if (cmd.Matches(1, "load"))
+                InitJourney();
+            else if (cruiseController is Journey && !((Journey)cruiseController).HandleJourneyCommand(cmd, out failReason))
+                optionalInfo = failReason;
         }
 
         private void InitOrient(Vector3D target)

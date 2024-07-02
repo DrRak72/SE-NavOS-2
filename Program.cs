@@ -98,12 +98,13 @@ namespace IngameScript
 
         private DateTime bootTime;
         public const string programName = "NavOS";
-        public const string versionStr = "2.14.7-dev";
+        public const string versionStr = "2.14.7";
 
         public Config config;
 
         public Program()
         {
+            InitCommands();
             LoadConfig(false);
             UpdateBlocks();
 
@@ -200,6 +201,7 @@ namespace IngameScript
                         cruiseController = new Journey(aimController, controller, gyros, config.Ship180TurnTimeSeconds * 1.5, thrustController, this);
                         cruiseController.CruiseTerminated += CruiseTerminated;
                         ((Journey)cruiseController).InitStep(step);
+                        stateStr = mode.ToString();
                     }
                 }
 

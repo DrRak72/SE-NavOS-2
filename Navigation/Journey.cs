@@ -76,11 +76,11 @@ namespace IngameScript
                 cruiseControl.AppendStatus(strb);
         }
 
-        public bool HandleJourneyCommand(string[] args, string fullCmdStr, out string failReason)
+        public bool HandleJourneyCommand(CommandLine cmd, out string failReason)
         {
             failReason = "Unknown Journey Command!";
 
-            if (args.Length < 2)
+            if (cmd.Count < 2)
             {
                 return false;
             }
@@ -94,7 +94,7 @@ namespace IngameScript
             //journey init - handled elsewhere
             //journey start
 
-            if (args[1] == "start")
+            if (cmd.Matches(1, "start"))
             {
                 if (waypoints.Count == 0)
                 {
@@ -135,7 +135,7 @@ namespace IngameScript
             currentStep = index;
             if (step.StopAtWaypoint || index == waypoints.Count - 1)
             {
-                cruiseControl = new RetroCruiseControl(step.Target + targetOffset, step.DesiredSpeed, aimControl, shipController, gyros, thrustControl, prog)
+                cruiseControl = new RetroCruiseControl(step.Target + targetOffset, step.DesiredSpeed, aimControl, shipController, gyros, thrustControl, prog, false)
                 {
                     decelStartMarginSeconds = this.decelStartMarginSeconds,
                 };
@@ -209,11 +209,10 @@ namespace IngameScript
             }
             double speed;
             bool stopAtWaypoint;
-            string targetName;
-            Vector3D target;
-            if (double.TryParse(args[0], out speed) && bool.TryParse(args[1], out stopAtWaypoint) && Utils.TryParseGps(line, out targetName, out target))
+            GPS gps;
+            if (double.TryParse(args[0], out speed) && bool.TryParse(args[1], out stopAtWaypoint) && GPS.TryParse(line, out gps))
             {
-                waypoint = new Waypoint(targetName, speed, target, stopAtWaypoint);
+                waypoint = new Waypoint(gps.Name, speed, gps.Position, stopAtWaypoint);
                 return true;
             }
             waypoint = default(Waypoint);

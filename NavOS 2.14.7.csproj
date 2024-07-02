@@ -38,9 +38,11 @@
   <Import Project="MDK/MDK.options.props" />
   <Import Project="MDK/MDK.paths.props" Condition="exists('MDK/MDK.paths.props')" />
   <ItemGroup>
+    <Compile Include="CommandLine.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Commands.cs" />
     <Compile Include="CoreSystemsPbApi.cs" />
+    <Compile Include="GPS.cs" />
     <Compile Include="Navigation\OneWayCruise.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="Navigation\CalibrateTurnTime.cs" />

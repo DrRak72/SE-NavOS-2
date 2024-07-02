@@ -107,6 +107,7 @@ namespace IngameScript
         private Vector3D myVelocity, targetDirection, gravityAtPos;
         private bool noSpeedOnStart;
         private RetroCruiseStage initialStage = RetroCruiseStage.None;
+        private bool savePersistentData;
 
         public RetroCruiseControl(
             Vector3D target,
@@ -115,7 +116,8 @@ namespace IngameScript
             IMyShipController controller,
             IList<IMyGyro> gyros,
             IVariableThrustController thrustController,
-            Program program)
+            Program program,
+            bool savePersistentData = true)
             : base(aimControl, controller, gyros)
         {
             this.Target = target;
@@ -123,7 +125,8 @@ namespace IngameScript
             this.thrustController = thrustController;
             this.program = program;
             this.config = program.config;
-            
+            this.savePersistentData = savePersistentData;
+
             Stage = RetroCruiseStage.None;
             gridMass = controller.CalculateShipMass().PhysicalMass;
 
@@ -138,7 +141,8 @@ namespace IngameScript
             IList<IMyGyro> gyros,
             IVariableThrustController thrustController,
             Program program,
-            RetroCruiseStage stage)
+            RetroCruiseStage stage,
+            bool savePersistentData = true)
             : this(
                   target,
                   desiredSpeed,
@@ -149,6 +153,7 @@ namespace IngameScript
                   program)
         {
             initialStage = stage;
+            this.savePersistentData = savePersistentData;
         }
 
         public void AppendStatus(StringBuilder strb)
@@ -424,8 +429,11 @@ namespace IngameScript
             SetDampenerState(false);
             lastAimDirectionAngleRad = null;
             decelerating = false;
-            config.PersistStateData = $"{NavModeEnum.Cruise}|{DesiredSpeed}|{Stage}";
-            program.Me.CustomData = config.ToString();
+            if (savePersistentData)
+            {
+                config.PersistStateData = $"{NavModeEnum.Cruise}|{DesiredSpeed}|{Stage}";
+                program.Me.CustomData = config.ToString();
+            }
         }
 
         private void CancelPerpendicularVelocity()
