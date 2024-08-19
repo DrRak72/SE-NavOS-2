@@ -31,6 +31,7 @@ namespace IngameScript
                 { "journey", CommandJourney },
                 { "approach", CommandApproach },
                 { "range", CommandRange },
+                { "rangeany", CommandRangeAny }
             };
         }
 
@@ -345,6 +346,30 @@ namespace IngameScript
             if ((target?.EntityId ?? 0) == 0)
                 return;
             InitRange(target.Value.EntityId, dist);
+        }
+
+        private void CommandRangeAny(CommandLine cmd)
+        {
+            AbortNav(false);
+            optionalInfo = "";
+
+            optionalInfo = "";
+            double dist = 6000; // Default distance if not provided
+
+            if (cmd.Count >= 2 && !double.TryParse(cmd[1], out dist))
+            {
+                optionalInfo = "Invalid distance argument";
+                return;
+            }
+
+            if (!wcApiActive)
+            {
+                try { wcApiActive = wcApi.Activate(Me); }
+                catch { wcApiActive = false; }
+            }
+            if (!wcApiActive)
+                return;
+            InitRange(-1, dist);
         }
 
         private void InitOrient(Vector3D target)

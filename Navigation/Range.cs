@@ -49,7 +49,8 @@ namespace IngameScript
             IMyShipController shipController,
             IMyTerminalBlock programmableBlock,
             IVariableThrustController thrustController,
-            double dist)
+            double dist
+            )
         {
             this.targetEntityId = targetEntityId;
             this.wcApi = wcApi;
@@ -81,62 +82,74 @@ namespace IngameScript
 
             try
             {
-                //support changing main target after running speedmatch
-                var aifocus = wcApi.GetAiFocus(pb.EntityId);
-                if (aifocus?.EntityId == targetEntityId)
+                if(targetEntityId != -1)
                 {
-                    target = aifocus.Value;
-                    targetInfoMode = TargetAcquisitionMode.AiFocus;
-                    return true;
-                }
-                else
-                {
-                    MyDetectedEntityInfo? ent = null;
-                    wcApi.GetSortedThreats(pb, threats);
-                    foreach (var threat in threats.Keys)
+                    //support changing main target after running speedmatch
+                    var aifocus = wcApi.GetAiFocus(pb.EntityId);
+                    if (aifocus?.EntityId == targetEntityId)
                     {
-                        if (threat.EntityId == targetEntityId)
+                        target = aifocus.Value;
+                        targetInfoMode = TargetAcquisitionMode.AiFocus;
+                        return true;
+                    }
+                    else
+                    {
+                        MyDetectedEntityInfo? ent = null;
+                        wcApi.GetSortedThreats(pb, threats);
+                        foreach (var threat in threats.Keys)
                         {
-                            ent = threat;
-                            targetInfoMode = TargetAcquisitionMode.SortedThreat;
-                            break;
+                            if (threat.EntityId == targetEntityId)
+                            {
+                                ent = threat;
+                                targetInfoMode = TargetAcquisitionMode.SortedThreat;
+                                break;
+                            }
+                        }
+
+                        threats.Clear();
+
+                        if (ent.HasValue)
+                        {
+                            target = ent.Value;
+                            return true;
                         }
                     }
 
+                    if (counter30)
+                    {
+                        MyDetectedEntityInfo? ent = null;
+                        //if neither methods found the target try looking thru obstructions
+                        wcApi.GetObstructions(pb, obstructions);
+                        foreach (var obs in obstructions)
+                        {
+                            if (obs.EntityId == targetEntityId)
+                            {
+                                ent = obs;
+                                targetInfoMode = TargetAcquisitionMode.Obstruction;
+                                break;
+                            }
+                        }
+
+
+                        if (ent.HasValue)
+                        {
+                            target = ent.Value;
+                            return true;
+                        }
+                    }
+
+                    targetInfoMode = TargetAcquisitionMode.None;
+                    return false;
+                } else
+                {
+                    wcApi.GetSortedThreats(pb, threats);
+                    target = threats.Keys.FirstOrDefault();
+                    
                     threats.Clear();
 
-                    if (ent.HasValue)
-                    {
-                        target = ent.Value;
-                        return true;
-                    }
+                    return true;
                 }
-
-                if (counter30)
-                {
-                    MyDetectedEntityInfo? ent = null;
-                    //if neither methods found the target try looking thru obstructions
-                    wcApi.GetObstructions(pb, obstructions);
-                    foreach (var obs in obstructions)
-                    {
-                        if (obs.EntityId == targetEntityId)
-                        {
-                            ent = obs;
-                            targetInfoMode = TargetAcquisitionMode.Obstruction;
-                            break;
-                        }
-                    }
-
-
-                    if (ent.HasValue)
-                    {
-                        target = ent.Value;
-                        return true;
-                    }
-                }
-
-                targetInfoMode = TargetAcquisitionMode.None;
-                return false;
+                
             }
             catch
             {
