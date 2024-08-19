@@ -30,6 +30,7 @@ namespace IngameScript
                 { "thrust", CommandApplyThrust },
                 { "journey", CommandJourney },
                 { "approach", CommandApproach },
+                { "range", CommandRange },
             };
         }
 
@@ -129,7 +130,7 @@ namespace IngameScript
 
                         target = new Vector3D(x, y, z);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         optionalInfo = "Error occurred while parsing coords";
                         return;
@@ -319,6 +320,33 @@ namespace IngameScript
             InitJourneyToPoint(approachPoint, true);
         }
 
+        private void CommandRange(CommandLine cmd)
+        {
+            AbortNav(false);
+            optionalInfo = "";
+
+            optionalInfo = "";
+            double dist = 6000; // Default distance if not provided
+
+            if (cmd.Count >= 2 && !double.TryParse(cmd[1], out dist))
+            {
+                optionalInfo = "Invalid distance argument";
+                return;
+            }
+
+            if (!wcApiActive)
+            {
+                try { wcApiActive = wcApi.Activate(Me); }
+                catch { wcApiActive = false; }
+            }
+            if (!wcApiActive)
+                return;
+            var target = wcApi.GetAiFocus(Me.CubeGrid.EntityId);
+            if ((target?.EntityId ?? 0) == 0)
+                return;
+            InitRange(target.Value.EntityId, dist);
+        }
+
         private void InitOrient(Vector3D target)
         {
             NavMode = NavModeEnum.Orient;
@@ -362,6 +390,15 @@ namespace IngameScript
             };
             cruiseController.CruiseTerminated += CruiseTerminated;
             ((Journey)cruiseController).InitStep(0, approach);
+            SaveConfig();
+        }
+
+        private void InitRange(long targetId, double dist)
+        {
+            NavMode = NavModeEnum.SpeedMatch;
+            thrustController.MaxThrustRatio = config.IgnoreMaxThrustForSpeedMatch ? 1f : (float)config.MaxThrustOverrideRatio;
+            cruiseController = new Range(targetId, wcApi, controller, Me, thrustController, dist);
+            cruiseController.CruiseTerminated += CruiseTerminated;
             SaveConfig();
         }
     }
