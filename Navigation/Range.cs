@@ -179,7 +179,7 @@ namespace IngameScript
                 relativeVelocity = target.Value.Velocity - currentVelocity;
 
                 Vector3D targetDirection = (currentPosition - targetPosition).SafeNormalize();
-                targetDistance = Math.Abs(Vector3D.Distance(currentPosition, targetPosition));
+                targetDistance = Vector3D.Distance(currentPosition, targetPosition);    
 
                 double effectiveThrust = CalculateEffectiveThrust(targetDirection, 1) > 0 ? CalculateEffectiveThrust(targetDirection, 1) : 100000;
                 double effectiveThrustNeg = CalculateEffectiveThrust(targetDirection, -1) > 0 ? CalculateEffectiveThrust(targetDirection, -1) : 100000;
@@ -187,7 +187,8 @@ namespace IngameScript
 
                 if (Math.Abs(dist - targetDistance) > Math.Max(stoppingDistance, 5))
                 {
-                    relativeVelocity += targetDirection * (dist - targetDistance);
+                    Vector3D fakeVelocity = targetDirection * (dist - targetDistance);
+                    relativeVelocity += fakeVelocity;
                 }
 
                 Vector3 relativeVelocityLocal = Vector3D.TransformNormal(relativeVelocity, MatrixD.Transpose(ShipController.WorldMatrix));
