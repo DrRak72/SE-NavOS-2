@@ -314,7 +314,7 @@ namespace IngameScript
                 return;
 
             var targetPosition = target?.Position;
-            Vector3D approachPoint = targetPosition.Value + (controller.GetPosition() - targetPosition.Value).SafeNormalize() * dist;
+            Vector3D approachPoint = targetPosition.Value + (controller.GetPosition() - targetPosition.Value).SafeNormalize() * (dist + 10 * (target?.Velocity.Length() ?? 0));
 
             InitJourneyToPoint(approachPoint, true);
         }
