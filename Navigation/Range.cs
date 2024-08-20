@@ -205,7 +205,7 @@ namespace IngameScript
 
                 if (Math.Abs(dist - targetDistance) > Math.Max(stoppingDistance, 5))
                 {
-                    Vector3D fakeVelocity = targetDirection * (dist - targetDistance);
+                    Vector3D fakeVelocity = targetDirection * (dist - targetDistance) * Math.Abs((dist - targetDistance) / Math.Max(dist, targetDistance));
                     relativeVelocity += fakeVelocity;
                 }
 
