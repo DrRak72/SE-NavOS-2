@@ -143,8 +143,13 @@ namespace IngameScript
                 } else
                 {
                     wcApi.GetSortedThreats(pb, threats);
+                    if (threats.Keys.Count == 0)
+                    {
+                        return false;
+                    }
+
                     target = threats.Keys.FirstOrDefault();
-                    
+
                     threats.Clear();
 
                     return true;
@@ -200,7 +205,7 @@ namespace IngameScript
 
                 if (Math.Abs(dist - targetDistance) > Math.Max(stoppingDistance, 5))
                 {
-                    Vector3D fakeVelocity = targetDirection * (dist - targetDistance);
+                    Vector3D fakeVelocity = targetDirection * (dist - targetDistance) * Math.Abs((dist - targetDistance) / Math.Max(dist, targetDistance));
                     relativeVelocity += fakeVelocity;
                 }
 
