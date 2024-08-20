@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VRageMath;
-using static IngameScript.Journey;
 
 namespace IngameScript
 {
@@ -29,7 +28,6 @@ namespace IngameScript
                 { "calibrateturn", cmd => CommandCalibrateTurnTime() },
                 { "thrust", CommandApplyThrust },
                 { "journey", CommandJourney },
-                { "approach", CommandApproach },
             };
         }
 
@@ -345,24 +343,6 @@ namespace IngameScript
             thrustController.MaxThrustRatio = (float)config.MaxThrustOverrideRatio;
             cruiseController = new Journey(aimController, controller, gyros, config.Ship180TurnTimeSeconds * 1.5, thrustController, this);
             cruiseController.CruiseTerminated += CruiseTerminated;
-        }
-
-        private void InitJourneyToPoint(Vector3D point, Boolean approach = false)
-        {
-            NavMode = NavModeEnum.Journey;
-            thrustController.MaxThrustRatio = (float)config.MaxThrustOverrideRatio;
-
-            // Create a single waypoint for the journey
-            var waypoint = new Journey.Waypoint("Approach Point", 15000, point, true);
-            var waypoints = new List<Journey.Waypoint> { waypoint };
-
-            cruiseController = new Journey(aimController, controller, gyros, config.Ship180TurnTimeSeconds * 1.5, thrustController, this)
-            {
-                waypoints = waypoints
-            };
-            cruiseController.CruiseTerminated += CruiseTerminated;
-            ((Journey)cruiseController).InitStep(0, approach);
-            SaveConfig();
         }
     }
 }
