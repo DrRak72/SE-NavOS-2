@@ -143,8 +143,13 @@ namespace IngameScript
                 } else
                 {
                     wcApi.GetSortedThreats(pb, threats);
+                    if (threats.Keys.Count == 0)
+                    {
+                        return false;
+                    }
+
                     target = threats.Keys.FirstOrDefault();
-                    
+
                     threats.Clear();
 
                     return true;
